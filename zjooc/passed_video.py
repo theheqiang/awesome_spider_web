@@ -6,7 +6,6 @@ import time
 import math
 from random import random
 from concurrent.futures import ThreadPoolExecutor
-from queue import PriorityQueue
 
 import requests
 
@@ -87,13 +86,12 @@ class Zjooc(object):
 
         return single_course_list
 
-    def send_modified_data(self,item,q,index):
+    def send_modified_data(self,item):
         '''
         发送视频观看数据,达到秒过的效果
         :param item: 单个chapter的数据
-        :param q: 任务队列
-        :param index: 权重
         '''
+        type_flag = ''
         ts = self.get_ajax_time()
         if item['resourceType'] == 1:
             video_params = {
@@ -106,9 +104,7 @@ class Zjooc(object):
             }
             result = requests.get(self.url, params=video_params, headers=self.headers).json()
             if result['resultCode'] == 0:
-                q.put((index,item['name'] + '的视频''------秒过成功'))
-            else:
-                q.put((index,item['name'] + '的视频''------秒过失败'))
+                type_flag = '视频'
         else:
             pdf_params = {
                 'time': ts,
@@ -118,9 +114,11 @@ class Zjooc(object):
             }
             result = requests.get(self.url, params=pdf_params, headers=self.headers).json()
             if result['resultCode'] == 0:
-                q.put((index, item['name'] + '的pdf''------秒过成功'))
-            else:
-                q.put((index, item['name'] + '的pdf''------秒过失败'))
+                type_flag = 'pdf'
+
+        return f'{item["name"]}的{type_flag}------秒过成功'
+
+
 
     def run(self):
         '''
@@ -132,16 +130,11 @@ class Zjooc(object):
             print('视频数据解析有误,请重新尝试')
             return
 
-        tp = ThreadPoolExecutor(100)
-        q = PriorityQueue()
+        with ThreadPoolExecutor(100) as executor:
+            result = executor.map(self.send_modified_data,single_course_list)
 
-        for index,item in enumerate(single_course_list):
-            tp.submit(self.send_modified_data,self,item,q,index)
-
-        tp.shutdown()
-
-        while not q.empty():
-            print(q.get()[1])
+            for ret in result:
+                print(ret)
 
 
 if __name__ == '__main__':
