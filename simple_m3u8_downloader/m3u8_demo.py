@@ -20,14 +20,13 @@ def download(downloadLink, name,lock):
     global allNum
     for _ in range(10):
         try:
-            print(downloadLink)
             req = requests.get(downloadLink, headers=headers, timeout=15).content
             with open(f"{name}", "wb") as f:
                 f.write(req)
                 f.flush()
-            lock.accuire()
+            lock.acquire()
             finishedNum += 1
-            print(f"\r{name}下载成功, 总进度{finishedNum // allNum * 100}%")
+            print(f"{name}下载成功, 总进度{round(finishedNum / allNum * 100, 2)}% ({finishedNum}/{allNum})")
             lock.release()
             break
         except:
@@ -100,7 +99,6 @@ def downloader(url, name, threadNum):
 
 if __name__ == '__main__':
     videoUrl = str(sys.argv[1])
-    print(videoUrl)
     name = str(sys.argv[2])
     threadNum = int(sys.argv[3])
     downloader(videoUrl, name, threadNum)
